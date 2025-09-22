@@ -5,7 +5,7 @@ import { gsap } from 'gsap';
 
 export const useGSAP = <T extends HTMLElement = HTMLDivElement>(callback: (context: { timeline: gsap.core.Timeline }) => void, dependencies: any[] = []) => {
   const ref = useRef<T>(null);
-  const timelineRef = useRef<gsap.core.Timeline>();
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {

@@ -1,85 +1,122 @@
-@import "tailwindcss/preflight";
+/* Google Fonts Import */
+
+@import "tailwindcss";
 @tailwind utilities;
 
-/* Global CSS Reset and Base Styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Local Font Definition */
+@font-face {
+  font-family: "Lovelo Black";
+  src: url("/fonts/lovelo_black.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
 }
 
-html, body {
-  height: 100%;
-  width: 100%;
-  overflow-x: hidden;
+/* Font Variables */
+.font-fraunces {
+  font-family: var(--font-fraunces);
+  font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0;
 }
 
-html {
-  scroll-behavior: smooth;
+.font-fraunces-display {
+  font-family: var(--font-fraunces);
+  font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0;
 }
 
-body {
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.font-fraunces-text {
+  font-family: var(--font-fraunces);
+  font-variation-settings: "opsz" 9, "SOFT" 0, "WONK" 0;
 }
 
-/* Ensure full viewport coverage */
-#__next,
-[data-nextjs-scroll-focus-boundary] {
-  height: 100%;
+.font-ibm-plex-mono {
+  font-family: var(--font-ibm-plex-mono);
 }
 
-/* Loading screen specific styles */
-.loading-container {
+.font-manrope {
+  font-family: var(--font-manrope);
+}
+
+.font-lovelo {
+  font-family: "Lovelo Black", sans-serif;
+  font-weight: 900;
+}
+
+/* Loading Screen Styles */
+.loading-screen {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9999;
-}
-
-/* Prevent scrolling during loading */
-.loading-active {
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  height: 100%;
-}
-
-/* Custom fonts */
-.font-mono {
-  font-family: var(--font-geist-mono), 'Courier New', monospace;
-}
-
-/* Smooth transitions */
-* {
-  transition: inherit;
-}
-
-/* Remove default button and input styles */
-button {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-/* Better text rendering */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 300;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-/* Ensure viewport units work correctly */
-.h-screen {
-  height: 100vh;
-  height: 100dvh; /* Dynamic viewport height for mobile */
-}
-
-.w-screen {
   width: 100vw;
-  width: 100dvw; /* Dynamic viewport width for mobile */
+  height: 100vh;
+  background-color: #29231e;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.loading-greeting {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 64px;
+  font-weight: 400;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #fffbf3;
+}
+
+.loading-counter {
+  position: absolute;
+  bottom: 4vh;
+  left: 4vw;
+  font-size: 160px;
+  font-weight: 400;
+  color: #fffbf3;
+  line-height: 1;
+}
+
+/* Custom Cursor */
+body {
+  cursor: none;
+}
+
+.custom-cursor {
+  position: fixed;
+  width: 24px;
+  height: 24px;
+  background-image: url("/Flower.svg");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+  z-index: 10000;
+  transform: translate(-50%, -50%);
+}
+
+/* Animated Underline */
+.animated-underline {
+  position: relative;
+  text-decoration: none;
+}
+
+.animated-underline {
+  display: inline-block;
+}
+
+.animated-underline::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background-color: black;
+  transition: width 0.3s ease-in-out;
+}
+
+.animated-underline:hover::after {
+  width: 100%;
+}
+
