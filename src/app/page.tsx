@@ -42,7 +42,17 @@ export default function Home() {
   const smallNameRef = useRef<HTMLDivElement>(null);
   const horizontalContainerRef = useRef<HTMLDivElement>(null);
   const aboutSectionRef = useRef<HTMLElement>(null);
-
+  const aboutTextPhase1Ref = useRef<HTMLParagraphElement>(null);
+  const aboutTextPhase2Ref = useRef<HTMLParagraphElement>(null);
+  const aboutTextPhase3Ref = useRef<HTMLParagraphElement>(null);
+  const aboutTextPhase4Ref = useRef<HTMLParagraphElement>(null);
+  const aboutTitleRef = useRef<HTMLHeadingElement>(null);
+  const aboutImage1Ref = useRef<HTMLImageElement>(null);
+  const aboutImage2Ref = useRef<HTMLImageElement>(null);
+  const aboutImage3Ref = useRef<HTMLImageElement>(null);
+  const aboutImage4Ref = useRef<HTMLImageElement>(null);
+  const [currentTextPhase, setCurrentTextPhase] = useState(1);
+  const [currentImagePhase, setCurrentImagePhase] = useState(1);
 
   const handleTransitionStart = () => {
     setShowHero(true);
@@ -197,15 +207,125 @@ export default function Home() {
   useEffect(() => {
     if (!loading && horizontalContainerRef.current) {
       let scrollProgress = 0;
+      let additionalScrollCount = 0;
+      let isAtEnd = false;
+      let scrollAccumulator = 0; // Accumulate small scroll events
+      let lastScrollTime = 0;
+      let localCurrentPhase = 1; // Track phase locally to avoid React state delay
+
+      // Function to handle phase transitions
+      const triggerPhaseTransition = (targetPhase: number) => {
+        // Get all text phase refs
+        const textPhaseRefs = [
+          aboutTextPhase1Ref.current,
+          aboutTextPhase2Ref.current,
+          aboutTextPhase3Ref.current,
+          aboutTextPhase4Ref.current,
+        ];
+
+        // Get all image refs
+        const imagePhaseRefs = [
+          aboutImage1Ref.current,
+          aboutImage2Ref.current,
+          aboutImage3Ref.current,
+          aboutImage4Ref.current,
+        ];
+
+        // Animate text phases with scale and fade
+        textPhaseRefs.forEach((ref, index) => {
+          if (ref) {
+            const isActive = index + 1 === targetPhase;
+            gsap.to(ref.parentElement, {
+              opacity: isActive ? 1 : 0,
+              scale: isActive ? 1 : 0.95,
+              duration: 0.3,
+              ease: "power2.out",
+            });
+          }
+        });
+
+        // Animate images with scale and fade
+        imagePhaseRefs.forEach((ref, index) => {
+          if (ref) {
+            const isActive = index + 1 === targetPhase;
+
+            if (isActive) {
+              // Entering image: start small and scale up
+              gsap.fromTo(ref,
+                {
+                  opacity: 0,
+                  scale: 0.9,
+                },
+                {
+                  opacity: 1,
+                  scale: 1,
+                  duration: 0.5,
+                  ease: "power2.out",
+                }
+              );
+            } else {
+              // Exiting image: fade out and scale down slightly
+              gsap.to(ref, {
+                opacity: 0,
+                scale: 0.95,
+                duration: 0.3,
+                ease: "power2.out",
+              });
+            }
+          }
+        });
+
+        // Update current image phase state
+        setCurrentImagePhase(targetPhase);
+      };
 
       const handleWheel = (e: WheelEvent) => {
         e.preventDefault();
 
         // Update scroll progress based on wheel direction (slower)
         scrollProgress += e.deltaY * 0.0003;
-        scrollProgress = Math.max(0, Math.min(1, scrollProgress));
 
-        // Move container horizontally (less smooth)
+        // Check if we're at the end or in phase mode
+        if (scrollProgress >= 1.0 || (isAtEnd && additionalScrollCount > 0)) {
+          isAtEnd = true;
+          scrollProgress = 1.0; // Lock at 100%
+
+          // Accumulate scroll events for slower phase changes
+          const currentTime = Date.now();
+          const timeDiff = currentTime - lastScrollTime;
+
+          // Only count significant scroll events (throttle fast scrolling)
+          if (timeDiff > 150) { // 150ms minimum between counts (much slower response)
+            scrollAccumulator += Math.sign(e.deltaY);
+
+            // Require more scroll accumulation before counting
+            if (Math.abs(scrollAccumulator) >= 2) {
+              if (scrollAccumulator > 0 && additionalScrollCount < 12) {
+                additionalScrollCount += 1; // Forward scroll (max 12 = Phase 4)
+                console.log(`Forward scroll, count: ${additionalScrollCount}`);
+              } else if (scrollAccumulator < 0 && additionalScrollCount > 0) {
+                additionalScrollCount -= 1; // Backward scroll only if we have count
+                console.log(`Backward scroll, count: ${additionalScrollCount}`);
+              } else if (scrollAccumulator < 0 && additionalScrollCount === 0) {
+                // Allow leaving the end section when at count 0
+                isAtEnd = false;
+                scrollProgress = 0.99; // Move slightly back
+                console.log(`Leaving end section`);
+              }
+
+              scrollAccumulator = 0; // Reset accumulator
+            }
+
+            lastScrollTime = currentTime;
+          }
+
+        } else {
+          isAtEnd = false;
+          additionalScrollCount = 0; // Reset when not at end
+          scrollProgress = Math.max(0, scrollProgress);
+        }
+
+        // Move container horizontally
         gsap.to(horizontalContainerRef.current, {
           x: -scrollProgress * window.innerWidth,
           duration: 0.6,
@@ -277,6 +397,55 @@ export default function Home() {
             ease: "power2.out",
           });
         }
+
+        // Trigger About section animations when reaching ~40% scroll progress
+        if (
+          (window as any).aboutAnimations &&
+          !(window as any).aboutAnimations.triggered &&
+          scrollProgress >= 0.4
+        ) {
+          (window as any).aboutAnimations.triggered = true;
+
+          // Create timeline for coordinated animations
+          const tl = gsap.timeline();
+
+          // First animate title
+          tl.to((window as any).aboutAnimations.titleSplit.chars, {
+            duration: 0.8,
+            ease: "power2.out",
+            y: 0,
+            opacity: 1,
+            stagger: 0.03,
+          })
+            // Then animate paragraph with slight delay (much faster)
+            .to(
+              (window as any).aboutAnimations.textSplit.chars,
+              {
+                duration: 0.25,
+                ease: "power2.out",
+                y: 0,
+                opacity: 1,
+                stagger: 0.005,
+              },
+              0.1
+            );
+        }
+
+        // Simple 5-scroll phase system - only when at 100%
+        if (isAtEnd && scrollProgress === 1.0) {
+          // Calculate phase based on every 3 scrolls (faster phase changes)
+          const targetPhase = Math.min(Math.max(Math.floor(additionalScrollCount / 3) + 1, 1), 4);
+
+          console.log(`Scroll count: ${additionalScrollCount}, Local phase: ${localCurrentPhase}, Target phase: ${targetPhase}`);
+
+          // Trigger transitions immediately when crossing boundaries
+          if (targetPhase !== localCurrentPhase) {
+            localCurrentPhase = targetPhase; // Update local phase immediately
+            setCurrentTextPhase(targetPhase); // Update React state
+            triggerPhaseTransition(targetPhase);
+            console.log(`Phase changed to ${targetPhase}, scroll count: ${additionalScrollCount}`);
+          }
+        }
       };
 
       // Add wheel event listener
@@ -284,6 +453,67 @@ export default function Home() {
 
       return () => {
         window.removeEventListener("wheel", handleWheel);
+      };
+    }
+  }, [loading]);
+
+  // About section animations setup
+  useEffect(() => {
+    if (
+      !loading &&
+      aboutSectionRef.current &&
+      aboutTextPhase1Ref.current &&
+      aboutTitleRef.current
+    ) {
+      let titleSplit: any;
+      let textSplit: any;
+
+      const setupSplitAnimations = () => {
+        // Setup title SplitText
+        titleSplit = SplitText.create(aboutTitleRef.current, {
+          type: "words,chars",
+          linesClass: "split-line",
+        });
+
+        // Setup paragraph SplitText
+        textSplit = SplitText.create(aboutTextPhase1Ref.current, {
+          type: "words,chars",
+          linesClass: "split-line",
+        });
+
+        // Set initial states - start below and invisible
+        gsap.set(titleSplit.chars, {
+          y: 80,
+          opacity: 0,
+        });
+
+        gsap.set(textSplit.chars, {
+          y: 60,
+          opacity: 0,
+        });
+      };
+
+      // Setup splits
+      setupSplitAnimations();
+
+      // Store refs for wheel event access
+      (window as any).aboutAnimations = {
+        titleSplit,
+        textSplit,
+        triggered: false,
+      };
+
+      // Cleanup function
+      return () => {
+        if (titleSplit) {
+          titleSplit.revert();
+        }
+        if (textSplit) {
+          textSplit.revert();
+        }
+        if ((window as any).aboutAnimations) {
+          delete (window as any).aboutAnimations;
+        }
       };
     }
   }, [loading]);
@@ -428,8 +658,147 @@ export default function Home() {
             {/* About Artan Section - Screen 2 */}
             <section
               ref={aboutSectionRef}
-              className="relative w-screen h-screen flex flex-col justify-center p-8 flex-shrink-0 bg-[#f9f9f9] border-l-2"
-            ></section>
+              className="relative w-screen h-screen flex flex-shrink-0 bg-[#f9f9f9]"
+            >
+              {/* Two Column Layout */}
+              <div className="w-full h-full flex">
+                {/* Left Side - Text/Story (50%) */}
+                <div className="w-1/2 h-full flex flex-col items-center pl-24 pr-20">
+                  {/* Content Container - Centered */}
+                  <div className="flex-1 flex flex-col justify-center items-center max-w-6xl w-full ">
+                    {/* Main Heading */}
+                    <div className="mb-16 text-center">
+                      <h2
+                        ref={aboutTitleRef}
+                        className="font-manrope font-black text-7xl uppercase text-[#130c01] leading-tight"
+                      >
+                        Artan, or the Art of Remembering
+                      </h2>
+                    </div>
+
+                    {/* Text Container for Phased Content */}
+                    <div className="relative min-h-[400px] w-full max-w-5xl overflow-visible">
+                      {/* Phase 1 Text - asAkid1 */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-100 w-full ">
+                        <p
+                          ref={aboutTextPhase1Ref}
+                          className="font-manrope font-light text-2xl text-[#130c01] leading-relaxed text-center w-full px-4"
+                        >
+                          Je m’appelle Artan Rushidi. J’ai grandi entre les
+                          montagnes de Macédoine du Nord, dans un décor où
+                          chaque pierre semblait porter une mémoire ancienne.
+                          Dans ces paysages, j’ai appris la simplicité et la
+                          force du silence. À dix ans, la Belgique est devenue
+                          ma seconde maison, et depuis, je vis entre deux pays,
+                          deux langues, deux cultures. Ce va-et-vient entre ici
+                          et ailleurs est devenu une part de moi. Très jeune, je
+                          ressentais déjà ce besoin profond : laisser une trace,
+                          inscrire mon passage dans le monde.
+                        </p>
+                      </div>
+
+                      {/* Phase 2 Text - asAkid2 */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0">
+                        <p ref={aboutTextPhase2Ref} className="font-manrope font-light text-2xl text-[#130c01] leading-relaxed text-center w-full px-4">
+                          Enfant, j’étais fasciné par les constructions : les
+                          murs, les formes, les architectures qui défiaient le
+                          temps. Cette admiration m’a naturellement conduit vers
+                          des études d’architecture, persuadé que bâtir des
+                          espaces, c’était écrire une histoire durable. Mais
+                          l’art est entré dans ma vie presque par accident. Pour
+                          arrondir mes fins de mois, je peignais et
+                          personnalisais des chaussures. Peu à peu, ce geste est
+                          devenu langage. J’ai compris que créer n’était pas
+                          seulement une activité, mais une nécessité vitale : ma
+                          manière de parler au monde, de raconter sans mots.
+                        </p>
+                      </div>
+
+                      {/* Phase 3 Text - asAgrownup1 */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0">
+                        <p ref={aboutTextPhase3Ref} className="font-manrope font-light text-2xl text-[#130c01] leading-relaxed text-center w-full px-4">
+                          À travers mes œuvres, j’ai appris à marcher dans mes
+                          souvenirs, à revivre mes émotions, à donner une forme
+                          visible à ce qui m’habitait. Ma première exposition,
+                          avec trente paires de chaussures peintes, fut un
+                          moment fondateur : chaque pièce était une mémoire, un
+                          fragment de moi offert aux regards. De là est né
+                          ARTIK, un projet qui a grandi avec moi, traversant les
+                          réseaux sociaux, les expositions et les rencontres.
+                          Aujourd’hui, mes créations sont plus que des objets :
+                          elles sont des poèmes visuels, des nœuds de mémoire,
+                          des émotions suspendues dans le temps.
+                        </p>
+                      </div>
+
+                      {/* Phase 4 Text - asAgrownup2 */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0">
+                        <p ref={aboutTextPhase4Ref} className="font-manrope font-light text-2xl text-[#130c01] leading-relaxed text-center w-full px-4">
+                          Je crois que l’art est avant tout un acte de mémoire
+                          et de présence. Une manière de se rappeler, de relier,
+                          de résister à l’oubli. Mon rêve est de continuer à
+                          faire voyager mes créations, de collaborer avec le
+                          monde de la mode et de l’art, et d’utiliser une partie
+                          de ce que je construis pour soutenir des causes qui
+                          comptent. Chaque œuvre est un pont jeté entre passé et
+                          avenir, un espace où les souvenirs deviennent lumière.
+                          Dans un monde saturé d’images, je veux offrir un temps
+                          d’arrêt, une invitation à ressentir. Car au fond,
+                          seules les émotions véritables restent gravées dans
+                          les cœurs.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom explanation - positioned at bottom of left div only */}
+                  <div className="flex justify-center mb-8">
+                    <p className="font-ibm-plex-mono text-xs text-gray-600 opacity-60 leading-relaxed text-center max-w-5xl px-6 py-3">
+                      This section reveals Artan's journey through scroll
+                      interaction. As you scroll down, witness the evolution of
+                      text that tells his story in four phases. Artan's work
+                      weaves together memories, heritage, and contemporary
+                      expression through the delicate art of lacework.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right Side - Images (50%) */}
+                <div className="w-1/2 h-full relative overflow-hidden">
+                  {/* Phase 1 Image - Childhood in Macedonia */}
+                  <img
+                    ref={aboutImage1Ref}
+                    src="/ArtanasaKid.png"
+                    alt="Artan Rushidi as a child in Macedonia - surrounded by traditional crafts"
+                    className="absolute inset-0 w-full h-full object-cover opacity-100"
+                  />
+
+                  {/* Phase 2 Image - Architecture Studies */}
+                  <img
+                    ref={aboutImage2Ref}
+                    src="/ArtanasaKid2.jpg"
+                    alt="Artan during his architecture studies in Belgium"
+                    className="absolute inset-0 w-full h-full object-cover opacity-0"
+                  />
+
+                  {/* Phase 3 Image - First Exhibition */}
+                  <img
+                    ref={aboutImage3Ref}
+                    src="/ArtanasaGrownup1.jpg"
+                    alt="Artan at his first exhibition - artist discovering his voice"
+                    className="absolute inset-0 w-full h-full object-cover opacity-0"
+                  />
+
+                  {/* Phase 4 Image - Today's Artist */}
+                  <img
+                    ref={aboutImage4Ref}
+                    src="/ArtanasaGrownup2.jpg"
+                    alt="Artan Rushidi today - master of lacework and contemporary expression"
+                    className="absolute inset-0 w-full h-full object-cover opacity-0"
+                  />
+                </div>
+              </div>
+            </section>
           </div>
         </main>
       )}
